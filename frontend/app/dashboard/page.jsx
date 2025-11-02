@@ -1,16 +1,27 @@
 "use client";
 import { useUser } from "@clerk/nextjs";
-import Navbar from "../../components/AppComponents/Navbar";
-import Layout from "../../components/Layout";
+import NavLayout from "../../components/Layouts/NavLayout";
+import InitialDialogBox from "../../components/AppComponents/InitialDialogBox";
+import { useEffect } from "react";
 const Page = () => {
   const { user } = useUser();
+
+  useEffect(() => {
+    <InitialDialogBox />;
+  }, []);
+
   return (
-    <Layout>
-      <div className="p-4">
-        <h1 className="text-2xl font-semibold">Welcome, {user?.firstName}!</h1>
-        <p>This is your dashboard 🎉</p>
+    <NavLayout>
+      <div className="p-4 min-h-screen">
+        <div className="text-center ">
+          <h1 className="text-2xl font-semibold">
+            Welcome, {user?.firstName}!
+          </h1>
+          <p>This is your dashboard 🎉</p>
+          <InitialDialogBox />
+        </div>
       </div>
-    </Layout>
+    </NavLayout>
   );
 };
 

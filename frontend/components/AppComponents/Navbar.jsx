@@ -1,13 +1,14 @@
 "use client";
 import React from "react";
-import { SignOutButton, UserButton } from "@clerk/nextjs";
+import { UserButton } from "@clerk/nextjs";
 import { TrendingUp } from "lucide-react";
 import { useRouter } from "next/navigation";
+
 const Navbar = () => {
   const router = useRouter();
   return (
-    <div>
-      <div className="flex px-6 py-5 text-2xl justify-between shadow-xl">
+    <nav className="fixed top-0 left-0 w-full z-50 bg-white shadow-md">
+      <div className="flex px-6 py-4 text-2xl justify-between items-center">
         <a
           onClick={() => router.push(`/dashboard`)}
           className="flex cursor-pointer items-center select-none"
@@ -21,7 +22,7 @@ const Navbar = () => {
           <UserButton afterSignOutUrl="/" />
         </div>
       </div>
-    </div>
+    </nav>
   );
 };
 
