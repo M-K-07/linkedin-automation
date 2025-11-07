@@ -21,12 +21,12 @@ def read_root():
 def get_user(clerk_id: str):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT email, role, full_name FROM users WHERE clerk_id = %s", (clerk_id,))
+    cur.execute("SELECT clerk_id, email, role, full_name FROM users WHERE clerk_id = %s", (clerk_id,))
     user = cur.fetchone()
     cur.close()
     conn.close()
     if user:
-        return {"email": user[0], "role": user[1], "full_name": user[2]}
+        return {"clerk_id": clerk_id, "email": user[1], "role": user[2], "full_name": user[3]}
     print("User not found")
     raise HTTPException(status_code=404, detail="User not found")
 
@@ -52,6 +52,23 @@ def create_user(user: User):
         conn.close()
     return {"message": "User created successfully"}
 
+@app.put('/api/user/{clerk_id}')
+def update_user(clerk_id: str, user: User):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE users SET email = %s, role = %s, full_name = %s WHERE clerk_id = %s",
+                    (user.email, user.role, user.full_name, clerk_id))
+        conn.commit()
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="User not found")
+    except Exception as e:
+        print("Error updating user:", e)
+        raise HTTPException(status_code=500, detail="Error updating user")
+    finally:
+        cur.close()
+        conn.close()
+    return {"message": "User updated successfully"}
 
 if __name__ == "__main__":
     import uvicorn

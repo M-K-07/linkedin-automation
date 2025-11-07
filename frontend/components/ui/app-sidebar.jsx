@@ -1,4 +1,6 @@
+'use client'
 import { Calendar, Home, Inbox, Search, Settings } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 import {
   Sidebar,
@@ -40,6 +42,8 @@ const items = [
 ];
 
 export function AppSidebar() {
+  const pathname = usePathname();
+
   return (
     <div>
       <Sidebar>
@@ -49,7 +53,7 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {items.map((item) => (
-                  <SidebarMenuItem key={item.title}>
+                  <SidebarMenuItem key={item.title} className={pathname === item.url ? "bg-gray-200 rounded-md" : ""}>
                     <SidebarMenuButton asChild>
                       <a href={item.url}>
                         <item.icon />
