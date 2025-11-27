@@ -6,10 +6,6 @@ import { useEffect } from "react";
 const Page = () => {
   const { user } = useUser();
 
-  useEffect(() => {
-    <InitialDialogBox />;
-  }, []);
-
   return (
     <NavLayout>
       <div className="p-4 min-h-screen">

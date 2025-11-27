@@ -2,3 +2,14 @@ fastapi
 uvicorn 
 psycopg2-binary 
 python-dotenv
+crewai
+langchain-openai
+psycopg2-binary
+schedule
+requests
+loguru
+python-dotenv
+crewai_tools
+GoogleNews
+praw
+apscheduler
