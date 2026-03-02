@@ -1,93 +1,93 @@
-from crewai import Agent
-from news_agent_crew.tools import fetch_content_tool  
+# news_agent_crew/agents.py (Refactored)
+
+from crewai import Agent, LLM
+from news_agent_crew.tools import fetch_content_tool 
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
-# from langchain_google_genai import ChatGoogleGenerativeAI
-from crewai import LLM
 import os
+
 load_dotenv()
 
+# --- LLM Definition (Define centrally) ---
+# NOTE: The LLM client itself might contain unpicklable locks. 
+# We define the LLM parameters once, but ideally, the LLM object itself 
+# should also be instantiated inside the functions if possible, but 
+# defining it once often works with CrewAI when using factory functions.
+llm_config = {
+    "model": "openrouter/qwen/qwen3-vl-30b-a3b-thinking", # Using a free openrouter model
+    "api_key": os.getenv("OPENAI_API_KEY_3") or os.getenv("OPENAI_API_KEY_2"),
+    "base_url": os.getenv("OPENAI_API_BASE", "https://openrouter.ai/api/v1"),
+    "temperature": 0.7
+}
 
-# llm = LLM(
-#     model="openai/gpt-oss-20b:free",
-#     temperature=0.1,
-#     api_key=os.getenv("OPENAI_API_KEY_1"),
-#     base_url="https://openrouter.ai/api/v1"
-# )
+# The LLM object itself
+llm = LLM(**llm_config)
 
-llm = LLM(
-    model="gemini/gemini-2.0-flash",
-    api_key=os.getenv("GOOGLE_API_KEY"),  # Or set GOOGLE_API_KEY/GEMINI_API_KEY
-    temperature=0.7
-)
 
 # -------------------------------
-# Research Agent
+# Research Agent Factory Function
 # -------------------------------
-research_agent = Agent(
-    role="Senior Researcher",
-    goal="Find full articles and content about {topic} from reliable sources",
-    verbose=True,
-    memory=True,
-    backstory=(
-        "You are an expert technology researcher with years of experience in "
-        "analyzing emerging trends in AI, healthcare, and software development. "
-        "You excel at scanning multiple sources, from academic papers to industry news, "
-        "to uncover insights that others might miss. "
-        "You have a meticulous approach, always fact-checking and verifying sources, "
-        "and your mission is to provide the most accurate and actionable information "
-        "about {topic}."
-        "You are also instructed to include the source links of the articles you find in your final output."
-
-    ),
-    tools=[fetch_content_tool],
-    llm=llm,
-    max_iterations=1,        # ← KEY: Stop loops
-    step_back_rate=0,
-    allow_delegation=True,
-)
+def get_research_agent():
+    return Agent(
+        role="Senior Researcher",
+        goal="Find full articles and content about {topic} from reliable sources",
+        verbose=True,
+        memory=True,
+        backstory=(
+            "You are an expert technology researcher with years of experience in "
+            "analyzing emerging trends. "
+            "Your mission is to provide accurate and real information about {topic}. "
+            "CRITICALLY IMPORTANT: You must ONLY use the EXACT sources, article titles, and URLs returned by your tools. "
+            "NEVER invent, hallucinate, or guess URLs, company names, or funding amounts. "
+            "If a tool returns an article, you must pass its exact URL to the next agent."
+        ),
+        tools=[fetch_content_tool],
+        llm=llm, # Use the shared LLM definition
+        max_iterations=1,
+        step_back_rate=0,
+        allow_delegation=True,
+    )
 
 # -------------------------------
-# Selector Agent
+# Selector Agent Factory Function
 # -------------------------------
-selector_agent = Agent(
-    role="Selector",
-    goal="Select the most relevant article from the research results about {topic}",
-    verbose=True,
-    memory=False,
-    backstory=(
-        "You are a discerning content evaluator with a sharp eye for relevance and quality. "
-        "Your role is to sift through multiple articles, summaries, and data points provided by the researcher, "
-        "identify the most insightful and authoritative sources, and eliminate noise or repetitive content. "
-        "You prioritize clarity, accuracy, and usefulness, ensuring that only the most high-value information "
-        "is passed to the writer for crafting a LinkedIn post."
-        "You are also instructed to include the source links of the articles you find in your final output."
-    ),
-    tools=[],
-    llm=llm,
-    allow_delegation=False,
-    max_iterations=3
-)
+def get_selector_agent():
+    return Agent(
+        role="Selector",
+        goal="Select the most relevant article from the research results about {topic}",
+        verbose=True,
+        memory=False,
+        backstory=(
+            "You are a discerning content evaluator. Your role is to sift through the researcher's output "
+            "and select the most insightful and factual article. "
+            "CRITICALLY IMPORTANT: You must pass along the EXACT URL provided by the researcher. "
+            "Do not modify or hallucinate any URLs or facts."
+        ),
+        tools=[],
+        llm=llm,
+        allow_delegation=False,
+        max_iterations=3
+    )
 
 # -------------------------------
-# Writer Agent
+# Writer Agent Factory Function
 # -------------------------------
-writer_agent = Agent(
-    role="Writer",
-    goal="Compose a concise, engaging, and insightful LinkedIn post about {topic} based on the research articles provided",
-    verbose=True,
-    memory=True,
-    backstory=(
-        "You are a professional content creator and tech communicator with experience in LinkedIn and professional blogging. "
-        "You excel at turning complex technical research into easy-to-read, engaging, and informative content. "
-        "Your writing style balances authority and approachability, making advanced topics accessible to a wide audience. "
-        "You structure content clearly, highlight key insights, and maintain a tone that inspires curiosity and trust. "
-        "You craft each LinkedIn post to engage professionals, provoke discussion, and provide practical takeaways from {topic} including hashtags."
-        "You are also instructed to include the source links of the articles you find in your final output."
-    ),
-    tools=[],
-    llm=llm,
-    allow_delegation=False
-)
-
-
+def get_writer_agent():
+    return Agent(
+        role="Writer",
+        goal="Compose a concise, engaging, and insightful LinkedIn post about {topic} based on the research articles provided",
+        verbose=True,
+        memory=True,
+        backstory=(
+            "You are a professional LinkedIn content creator. "
+            "Your goal is to turn the provided research into a simple, engaging, and easy-to-read LinkedIn post. "
+            "Write in a conversational and professional tone that even a non-technical person can easily understand. "
+            "Avoid heavy jargon, complex technical terms, or overly dense paragraphs. "
+            "Keep sentences short and formatting clean (use bullet points or emojis sparingly but effectively). "
+            "CRITICALLY IMPORTANT: At the end of the post, you MUST list the sources using the EXACT URLs provided by the researcher and selector. "
+            "NEVER invent, hallucinate, or make up fake URLs (like techcrunch.com/fake-article) or company names. "
+            "If the URL provided is 'No URL' or 'N/A', simply state the source name without a link."
+        ),
+        tools=[],
+        llm=llm,
+        allow_delegation=False
+    )

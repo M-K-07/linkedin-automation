@@ -36,10 +36,12 @@ def run_news_agent_scheduler(clerk_id: str) -> str:
     
     topic = ", ".join(user_schedule.get("areas_of_interest", []))
     email = user_schedule.get("email")
+    interested_sources = user_schedule.get("interested_sources", ["Google News", "Reddit"])
     
     print("Fetched topic:", topic)
+    print("Fetched sources:", interested_sources)
     print("Starting CrewAI workflow...")
-    result = generate_linkedin_post(topic)
+    result = generate_linkedin_post(topic, interested_sources)
     
     if not isinstance(result, str):
         try:

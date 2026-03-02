@@ -1,3 +1,4 @@
+
 from crewai.tools import BaseTool
 from typing import Type
 from pydantic import BaseModel, Field
@@ -21,6 +22,10 @@ class ContentFetcherInput(BaseModel):
         ..., 
         description="The topic to search for (e.g., 'AI in healthcare', 'blockchain technology')"
     )
+    interested_sources: list[str] = Field(
+        default_factory=list,
+        description="List of platforms to search. E.g., ['Google News', 'Reddit']. If empty, searches all."
+    )
 
 class ContentFetcherTool(BaseTool):
     name: str = "ContentFetcher"
@@ -31,80 +36,85 @@ class ContentFetcherTool(BaseTool):
     )
     args_schema: Type[BaseModel] = ContentFetcherInput
 
-    def _run(self, topic: str) -> str:
+    def _run(self, topic: str, interested_sources: list[str] = None) -> str:
         """
         Fetches news and returns formatted string results.
         Returns a string instead of list for better LLM parsing.
         """
-        print(f"\n🔍 Fetching content about: {topic}")
+        if interested_sources is None:
+            interested_sources = ["Google News", "Reddit"]
+            
+        print(f"\n🔍 Fetching content about: {topic} from sources: {interested_sources}")
         results = []
         
-        # Google News (up to 2)
-        try:
-            gn = GoogleNews(lang='en', period='7d')
-            gn.search(topic)
-            news_results = gn.results(sort=True)
-            
-            for i, article in enumerate(news_results[:2], 1):
-                title = article.get('title', 'No title')
-                desc = article.get('desc', 'No description')
-                url = article.get('link', 'No URL')
+        # Google News
+        if "Google News" in interested_sources:
+            try:
+                gn = GoogleNews(lang='en', period='7d')
+                gn.search(topic)
+                news_results = gn.results(sort=True)
                 
+                for i, article in enumerate(news_results[:2], 1):
+                    title = article.get('title', 'No title')
+                    desc = article.get('desc', 'No description')
+                    url = article.get('link', 'No URL')
+                    
+                    results.append(
+                        f"Article {i}:\n"
+                        f"Source: GoogleNews\n"
+                        f"URL: {url}\n"
+                        f"Content: {title} - {desc}\n"
+                    )
+                
+                print(f"✅ Found {len(news_results)} Google News articles")
+                
+            except Exception as e:
+                print(f"⚠️ Google News error: {e}")
                 results.append(
-                    f"Article {i}:\n"
+                    f"Article 1:\n"
                     f"Source: GoogleNews\n"
-                    f"URL: {url}\n"
-                    f"Content: {title} - {desc}\n"
-                )
-            
-            print(f"✅ Found {len(news_results)} Google News articles")
-            
-        except Exception as e:
-            print(f"⚠️ Google News error: {e}")
-            results.append(
-                f"Article 1:\n"
-                f"Source: GoogleNews\n"
-                f"URL: N/A\n"
-                f"Content: Recent developments in {topic} (search unavailable)\n"
-            )
-        
-        # Reddit (up to 2)
-        # try:
-        #     reddit_posts = []
-            
-        #     for submission in reddit.subreddit("all").search(topic, limit=5, sort='relevance', time_filter='week'):
-        #         title = submission.title
-        #         content = submission.selftext if submission.selftext else "Discussion post"
-        #         url = submission.url
-        #         subreddit = submission.subreddit.display_name
-                
-        #         reddit_posts.append({
-        #             'title': title,
-        #             'content': content,
-        #             'url': url,
-        #             'subreddit': subreddit
-        #         })
-            
-        #     # Add top 2 Reddit posts
-        #     for i, post in enumerate(reddit_posts[:2], len(results) + 1):
-        #         results.append(
-        #             f"Article {i}:\n"
-        #             f"Source: Reddit - r/{post['subreddit']}\n"
-        #             f"URL: {post['url']}\n"
-        #             f"Content: {post['title']} - {post['content']}\n"
-        #         )
-            
-        #     print(f"✅ Found {len(reddit_posts)} Reddit posts")
-            
-        # except Exception as e:
-            print(f"⚠️ Reddit error: {e}")
-            if len(results) < 2:
-                results.append(
-                    f"Article {len(results) + 1}:\n"
-                    f"Source: Reddit\n"
                     f"URL: N/A\n"
-                    f"Content: Community discussions about {topic} (search unavailable)\n"
+                    f"Content: Recent developments in {topic} (search unavailable)\n"
                 )
+        
+        # Reddit 
+        if "Reddit" in interested_sources:
+            try:
+                reddit_posts = []
+                
+                for submission in reddit.subreddit("all").search(topic, limit=5, sort='relevance', time_filter='week'):
+                    title = submission.title
+                    content = submission.selftext if submission.selftext else "Discussion post"
+                    url = submission.url
+                    subreddit = submission.subreddit.display_name
+                    
+                    reddit_posts.append({
+                        'title': title,
+                        'content': content,
+                        'url': url,
+                        'subreddit': subreddit
+                    })
+                
+                # Add top 2 Reddit posts
+                for i, post in enumerate(reddit_posts[:2], len(results) + 1):
+                    results.append(
+                        f"Article {i}:\n"
+                        f"Source: Reddit - r/{post['subreddit']}\n"
+                        f"URL: {post['url']}\n"
+                        f"Content: {post['title']} - {post['content']}\n"
+                    )
+                
+                print(f"✅ Found {len(reddit_posts)} Reddit posts")
+                
+            except Exception as e:
+                print(f"⚠️ Reddit error: {e}")
+                if len(results) < 2:
+                    results.append(
+                        f"Article {len(results) + 1}:\n"
+                        f"Source: Reddit\n"
+                        f"URL: N/A\n"
+                        f"Content: Community discussions about {topic} (search unavailable)\n"
+                    )
         
         # Ensure we have at least 2 results
         while len(results) < 2:

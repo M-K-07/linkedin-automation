@@ -39,28 +39,31 @@ const NewsAgentPage = () => {
 
   useEffect(() => {
     const fetchExistingSettings = async () => {
-      setLoading(true);
       if (!user) return;
-      const response = await fetch(`${baseURL}/api/agents/news-agent/schedule/${user.id}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setUserEmail(data.email);
-        setAreaOfInterest(data.areas_of_interest);
-        setInterestedSources(data.interested_sources);
-        setDays(data.days);
-        setHour(data.hour.toString().padStart(2, "0"));
-        setMinute(data.minute.toString().padStart(2, "0"));
-        setPeriod(data.period);
-        setScheduleExists(true);
+      setLoading(true);
+      try {
+        const response = await fetch(`${baseURL}/api/agents/news-agent/schedule/${user.id}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUserEmail(data.email);
+          setAreaOfInterest(data.areas_of_interest);
+          setInterestedSources(data.interested_sources);
+          setDays(data.days);
+          setHour(data.hour.toString().padStart(2, "0"));
+          setMinute(data.minute.toString().padStart(2, "0"));
+          setPeriod(data.period);
+          setScheduleExists(true);
+        }
+      } finally {
+        setLoading(false);
       }
     };
     fetchExistingSettings();
-    setLoading(false);
   }, [user]);
 
   const handleSourceChange = (checked, source) => {
@@ -123,11 +126,14 @@ const NewsAgentPage = () => {
   });
     if (response.ok) { 
       setIsEditing(false);
+      setLoading(false);
       console.log("Details updated successfully");
     } else {
       const data = await response.json();
       console.error("Error updating details:", data);
+      setLoading(false);
     }
+    
   }
 
   const handleCancelEdit = (e) => {
@@ -317,12 +323,12 @@ const NewsAgentPage = () => {
 
               <div className="flex gap-4 pt-4">
                 {!scheduleExists ? (
-                  <Button size="lg" onClick={handleStartScheduling} disabled={loading}>
+                  <Button size="lg" onClick={handleStartScheduling} disabled={loading} className="cursor-pointer">
                     {loading ? <><Loader className="animate-spin mr-2" /> Scheduling...</> : "Start Scheduling"}
                   </Button>
                 ) : isEditing ? (
                   <>
-                    <Button size="lg" onClick={handleUpdateDetails} disabled={loading}>
+                    <Button size="lg" onClick={handleUpdateDetails} disabled={loading} className="cursor-pointer">
                       {loading ? <><Loader className="animate-spin mr-2" /> Updating...</> : "Update Schedule"}
                     </Button>
                     <Button
@@ -330,6 +336,7 @@ const NewsAgentPage = () => {
                       variant="outline"
                       onClick={handleCancelEdit}
                       disabled={loading}
+                      className="cursor-pointer"
                     >
                       Cancel
                     </Button>
@@ -343,6 +350,7 @@ const NewsAgentPage = () => {
                       setIsEditing(true);
                     }}
                     // disabled={loading}
+                    className="cursor-pointer"
                   >
                     Edit Details
                   </Button>

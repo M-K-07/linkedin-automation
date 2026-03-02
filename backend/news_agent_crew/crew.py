@@ -1,25 +1,34 @@
+import copy # Keep copy just in case, but deepcopy is no longer needed for agents
 from crewai import Crew, Process
-from news_agent_crew.agents import research_agent, selector_agent, writer_agent
-from news_agent_crew.tasks import research_task, selector_task, write_task
-
-# -------------------------------
-# Forming the Crew
-# -------------------------------
-crew = Crew(
-    agents=[research_agent, selector_agent, writer_agent],
-    tasks=[research_task, selector_task, write_task],
-    process=Process.sequential  
-)
+from news_agent_crew.agents import get_research_agent, get_selector_agent, get_writer_agent
+from news_agent_crew.tasks import get_tasks # <-- Import the task factory function
+from news_agent_crew.tools import fetch_content_tool # <-- Import the tool instance
 
 # -------------------------------
 # Kickoff function
 # -------------------------------
-def generate_linkedin_post(topic):
+def generate_linkedin_post(topic, interested_sources):
     """
-    Runs the CrewAI workflow for a given topic and returns the final LinkedIn draft.
+    Runs the CrewAI workflow by creating fresh agent and task instances for safe concurrency.
     """
+    
+    # 1. Instantiate NEW Agent objects for this run
+    researcher = get_research_agent()
+    selector = get_selector_agent()
+    writer = get_writer_agent()
+    
+    # 2. Instantiate NEW Task objects, injecting the fresh Agents
+    local_tasks = get_tasks(topic, interested_sources, researcher, selector, writer, fetch_content_tool)
+
+    # 3. Instantiate the isolated Crew
+    crew = Crew(
+        agents=[researcher, selector, writer],
+        tasks=local_tasks,
+        process=Process.sequential 
+    )
+    
     print("Beginning CrewAI workflow for topic:", topic)
-    result = crew.kickoff(inputs={"topic": topic})
+    result = crew.kickoff(inputs={"topic": topic, "interested_sources": interested_sources})
 
     print("DEBUG - Crew kickoff result:", result)
 
@@ -31,7 +40,9 @@ def generate_linkedin_post(topic):
 
 if __name__ == "__main__":
     topic = input("Enter topic for LinkedIn post: ")
-    post = generate_linkedin_post(topic)
+    # For testing, you can input a list or default to both
+    interested_sources = ["Google News", "Reddit"]
+    post = generate_linkedin_post(topic, interested_sources)
     print("\n--- Generated LinkedIn Post ---\n")
     print(post)
 
