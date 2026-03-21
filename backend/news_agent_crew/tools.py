@@ -44,41 +44,47 @@ class ContentFetcherTool(BaseTool):
         if interested_sources is None:
             interested_sources = ["Google News", "Reddit"]
             
+        sources_lower = [str(s).lower() for s in interested_sources]
+            
         print(f"\n🔍 Fetching content about: {topic} from sources: {interested_sources}")
         results = []
         
         # Google News
-        if "Google News" in interested_sources:
+        if "google news" in sources_lower or "google-news" in sources_lower:
             try:
-                gn = GoogleNews(lang='en', period='7d')
-                gn.search(topic)
-                news_results = gn.results(sort=True)
+                import urllib.request
+                import urllib.parse
+                import xml.etree.ElementTree as ET
                 
-                for i, article in enumerate(news_results[:2], 1):
-                    title = article.get('title', 'No title')
-                    desc = article.get('desc', 'No description')
-                    url = article.get('link', 'No URL')
-                    
+                encoded_topic = urllib.parse.quote(topic)
+                url = f"https://news.google.com/rss/search?q={encoded_topic}&hl=en-US&gl=US&ceid=US:en"
+                
+                req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                with urllib.request.urlopen(req) as response:
+                    xml_data = response.read()
+                root = ET.fromstring(xml_data)
+                
+                news_results = []
+                for item in root.findall('.//item')[:2]:
+                    title = item.find('title').text if item.find('title') is not None else 'No title'
+                    link = item.find('link').text if item.find('link') is not None else 'No URL'
+                    news_results.append({'title': title, 'link': link, 'desc': title})
+                
+                for i, article in enumerate(news_results, 1):
                     results.append(
                         f"Article {i}:\n"
-                        f"Source: GoogleNews\n"
-                        f"URL: {url}\n"
-                        f"Content: {title} - {desc}\n"
+                        f"Source: GoogleNews RSS\n"
+                        f"URL: {article['link']}\n"
+                        f"Content: {article['title']}\n"
                     )
                 
-                print(f"✅ Found {len(news_results)} Google News articles")
+                print(f"✅ Found {len(news_results)} Google News articles via RSS")
                 
             except Exception as e:
-                print(f"⚠️ Google News error: {e}")
-                results.append(
-                    f"Article 1:\n"
-                    f"Source: GoogleNews\n"
-                    f"URL: N/A\n"
-                    f"Content: Recent developments in {topic} (search unavailable)\n"
-                )
-        
+                print(f"⚠️ Google News RSS error: {e}")
+                
         # Reddit 
-        if "Reddit" in interested_sources:
+        if "reddit" in sources_lower:
             try:
                 reddit_posts = []
                 

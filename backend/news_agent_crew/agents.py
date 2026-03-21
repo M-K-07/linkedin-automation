@@ -14,7 +14,7 @@ load_dotenv()
 # defining it once often works with CrewAI when using factory functions.
 llm_config = {
     "model": "openrouter/qwen/qwen3-vl-30b-a3b-thinking", # Using a free openrouter model
-    "api_key": os.getenv("OPENAI_API_KEY_3") or os.getenv("OPENAI_API_KEY_2"),
+    "api_key": os.getenv("OPENAI_API_KEY"),
     "base_url": os.getenv("OPENAI_API_BASE", "https://openrouter.ai/api/v1"),
     "temperature": 0.7
 }
@@ -86,6 +86,24 @@ def get_writer_agent():
             "CRITICALLY IMPORTANT: At the end of the post, you MUST list the sources using the EXACT URLs provided by the researcher and selector. "
             "NEVER invent, hallucinate, or make up fake URLs (like techcrunch.com/fake-article) or company names. "
             "If the URL provided is 'No URL' or 'N/A', simply state the source name without a link."
+        ),
+        tools=[],
+        llm=llm,
+        allow_delegation=False
+    )
+
+# -------------------------------
+# Editor Agent Factory Function
+# -------------------------------
+def get_editor_agent():
+    return Agent(
+        role="Senior Editor",
+        goal="Rewrite and improve the existing LinkedIn post according to the user's instructions.",
+        verbose=True,
+        memory=False,
+        backstory=(
+            "You are an expert editor who refines and adapts LinkedIn posts perfectly to specific instructions. "
+            "You maintain the core facts and any source URLs from the original post unless instructed otherwise."
         ),
         tools=[],
         llm=llm,

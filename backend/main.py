@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from database.db import get_db_connection
 from fastapi.middleware.cors import CORSMiddleware
-from routers import user, agent
+from routers import user, agent, history
 
 from contextlib import asynccontextmanager
 from scheduler.scheduler import start_scheduler, scheduler, add_schedule_job
@@ -28,6 +28,7 @@ def read_root():
 
 app.include_router(user.router)
 app.include_router(agent.router)
+app.include_router(history.router)
 
 if __name__ == "__main__":
     import uvicorn

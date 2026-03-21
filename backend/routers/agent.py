@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException
 from database.db import get_db_connection
 from schemas.agent import NewsAgent, NewsAgentUpdate
 from scheduler.scheduler import add_schedule_job
+from scheduler.jobs import run_news_agent_scheduler
+import json
 
 router = APIRouter(
     prefix="/api/agents/news-agent/schedule",
@@ -94,4 +96,27 @@ def update_news_agent(clerk_id: str, agent: NewsAgentUpdate):
     finally:
         cur.close()
         conn.close()
-    return {"message": "News agent updated successfully"}   
+    return {"message": "News agent updated successfully"}
+
+# Manual Execution Endpoint
+@router.post("/run/{clerk_id}")
+def run_news_agent_now(clerk_id: str):
+    try:
+        # Run CrewAI synchronously and wait for the final drafted post
+        result = run_news_agent_scheduler(clerk_id)
+        
+        if not result or result == "No schedule found for the given user.":
+            raise HTTPException(status_code=400, detail="Agent is not fully configured. Please schedule it first.")
+        
+        if not isinstance(result, str):
+            try:
+                result_str = json.dumps(result.__dict__)
+            except Exception:
+                result_str = str(result)
+        else:
+            result_str = result
+
+        return {"message": "Agent execution completed successfully", "content": result_str}
+    except Exception as e:
+        print("Error executing agent manually:", e)
+        raise HTTPException(status_code=500, detail=str(e))

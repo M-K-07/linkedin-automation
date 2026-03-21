@@ -46,3 +46,27 @@ if __name__ == "__main__":
     print("\n--- Generated LinkedIn Post ---\n")
     print(post)
 
+def rewrite_linkedin_post(existing_content: str, user_prompt: str):
+    """
+    Uses a modular CrewAI editor agent to rewrite an existing post based on user instructions.
+    """
+    from crewai import Crew, Process
+    from news_agent_crew.agents import get_editor_agent
+    from news_agent_crew.tasks import get_editor_task
+    
+    editor_agent = get_editor_agent()
+    editor_task = get_editor_task(existing_content, user_prompt, editor_agent)
+    
+    crew = Crew(
+        agents=[editor_agent],
+        tasks=[editor_task],
+        process=Process.sequential 
+    )
+    
+    print("Beginning CrewAI rewrite workflow with instructions:", user_prompt)
+    result = crew.kickoff()
+    
+    if not result:
+        return "Failed to rewrite the post."
+    return result
+

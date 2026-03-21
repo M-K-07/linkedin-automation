@@ -95,3 +95,17 @@ def get_tasks(topic, interested_sources, research_agent, selector_agent, writer_
         )
     
     return [research_task, selector_task, write_task]
+
+# -------------------------------
+# Editor Task Factory Function
+# -------------------------------
+def get_editor_task(existing_content, user_prompt, editor_agent):
+    return Task(
+        description=(
+            f"Here is an existing LinkedIn post:\n\n{existing_content}\n\n"
+            f"The user wants you to rewrite it with these explicit instructions:\n\"{user_prompt}\"\n\n"
+            "Please provide the final rewritten LinkedIn post. Maintain the core facts and any source URLs from the original post unless instructed otherwise."
+        ),
+        expected_output="The final rewritten LinkedIn post.",
+        agent=editor_agent
+    )
